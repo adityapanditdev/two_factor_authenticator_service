@@ -31,3 +31,7 @@ namespace :db do
     end
   end
 end
+
+task "server" do
+  exec 'ruby app/controllers/users_controller.rb'
+end
