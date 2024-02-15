@@ -67,15 +67,19 @@ end
 post '/register' do
   email = params['email']
   password = params['password_digest']
-  user = User.new(email: email, password_digest: BCrypt::Password.create(password))
-
-  if user.save
+  user = User.new(email: email, password_digest: password)
+  
+ if user.valid?
+    encrypted_password = BCrypt::Password.create(password)
+    user.password_digest = encrypted_password
+    user.save
     send_confirmation_email(email)
     redirect '/login'
-  else
+  else    
     erb :register, locals: { errors: user.errors.full_messages }
   end
 end
+
 
 # Route for displaying login form
 get '/login' do
@@ -131,7 +135,7 @@ end
 post '/account/2fa' do
   require_login
   enable_2fa = params['enable_2fa'] == 'true'
-  
+
   if enable_2fa
     generate_secret
     redirect '/setup-2fa?2fa_enabled=true'
