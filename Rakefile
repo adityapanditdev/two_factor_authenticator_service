@@ -35,3 +35,14 @@ end
 task "server" do
   exec 'ruby app/controllers/users_controller.rb'
 end
+
+namespace :console do
+  desc 'Starts a console with access to your application environment'
+  task :start do
+    require './app/controllers/users_controller.rb'
+    puts 'Loading application environment...'
+
+    puts 'Starting console...'
+    Pry.start(binding, quiet: true)
+  end
+end
