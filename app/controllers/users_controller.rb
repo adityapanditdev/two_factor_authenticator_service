@@ -1,63 +1,84 @@
 require 'sinatra'
 require 'bcrypt'
 require 'pony'
-require 'byebug'
 require_relative '../models/user'
 
+# Enable sessions and set views directory
+enable :sessions
 set :views, File.expand_path('../views', __dir__)
+
+helpers do
+  # Method to retrieve the current user based on session
+  def current_user
+    User.first(id: session[:user_id])
+  end
+
+  # Method to send confirmation email
+  def send_confirmation_email(email)
+    Pony.mail({
+      to: email,
+      subject: 'Registration Confirmation',
+      body: 'Thank you for registering!',
+      via: :smtp,
+      via_options: {
+        address: 'smtp.gmail.com',
+        port: '587',
+        user_name: 'rordev123456@gmail.com',
+        password: 'ktmdrloqmibaxknl',
+        authentication: :plain,
+        domain: 'gmail.com'
+      }
+    })
+  end
+end
 
 # Route for displaying registration form
 get '/register' do
+  redirect "/account/settings?session_id=true" if current_user
   erb :register, locals: { errors: [] }
 end
 
 # Route for processing registration form submission
 post '/register' do
-  # Retrieve form data
-  byebug
   email = params['email']
   password = params['password_digest']
+  user = User.new(email: email, password_digest: BCrypt::Password.create(password))
 
-  # Create a new user instance with the provided data
-  user = User.new(email: email, password_digest: password)
-
-  # Validate the user data
-  if user.valid?
-    # Hash and securely store the password using bcrypt
-    hashed_password = BCrypt::Password.create(password)
-
-    # Update the user's password digest with the hashed password
-    user.password_digest = hashed_password
-
-    # Save the user to the database
-    user.save
-
-    # Send confirmation email
+  if user.save
     send_confirmation_email(email)
-
-    # Redirect to a confirmation page or login page
-    redirect '/confirmation'
+    redirect '/login'
   else
-    # If there are validation errors, render the registration form with error messages
     erb :register, locals: { errors: user.errors.full_messages }
   end
 end
 
-# Method to send confirmation email
-def send_confirmation_email(email)
-  # Replace the placeholders with your actual email configuration
-  Pony.mail({
-    to: email,
-    subject: 'Registration Confirmation',
-    body: 'Thank you for registering!',
-    via: :smtp,
-    via_options: {
-      address: 'smtp.gmail.com',
-      port: '587',
-      user_name: 'rordev123456@gmail.com',
-      password: 'ktmdrloqmibaxknl',
-      authentication: :plain,
-      domain: 'gmail.com'
-    }
-  })
+# Route for displaying login form
+get '/login' do
+  redirect "/account/settings" if current_user
+  erb :login, locals: { error: params['error'].to_s }
+end
+
+# Route for processing login form submission
+post '/login' do
+  email = params['email']
+  password = params['password_digest']
+  user = User.authenticate(email, password)
+
+  if user && BCrypt::Password.new(user.password_digest) == password
+    if user.two_factor_enabled
+      redirect("/setup-2fa?user_id=#{user.id}")
+
+    else
+      session[:user_id] = user.id
+      redirect("/account/settings")
+    end
+  else
+    redirect '/login?error=invalid_credentials'
+  end
+end
+
+# Route for logging out
+post '/logout' do
+  session.clear if current_user
+  redirect '/login?error=logout'
 end

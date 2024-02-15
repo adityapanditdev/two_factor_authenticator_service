@@ -1,6 +1,7 @@
 require 'sequel'
 require 'yaml'
 require 'byebug'
+require 'bcrypt'
 Sequel.connect(YAML.load_file('config/database.yml')['development'])
 
 class User < Sequel::Model
@@ -14,10 +15,19 @@ class User < Sequel::Model
     validates_password_complexity :password_digest
   end
 
+  def self.authenticate(email, password)
+    user = User.first(email: email)
+    return nil unless user
+    if BCrypt::Password.new(user.password_digest) == password
+      return user
+    else
+      return nil
+    end
+  end
+
   private
 
   def validates_password_complexity(attribute)
-    byebug
     value = send(attribute)
 
     unless /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[\W_]).{6,}$/.match?(value)
