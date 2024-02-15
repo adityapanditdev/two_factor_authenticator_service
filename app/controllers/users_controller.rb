@@ -21,6 +21,23 @@ helpers do
     redirect '/login?error=session_expired' if current_user.nil?
   end
 
+  # Method to generate a secret key for 2FA
+  def generate_secret
+    current_user.update(token: ROTP::Base32.random_base32) if current_user.token.nil?
+  end
+
+  # Method to generate a QR code URL for the secret key
+  def generate_qr_code_url(secret, username)
+    issuer = 'two_factor_authentication' # Customize issuer if needed
+    ROTP::TOTP.new(secret, issuer: issuer).provisioning_uri(username)
+  end
+
+  # Method to verify the token entered by the user
+  def verify_token(secret, token)
+    totp = ROTP::TOTP.new(secret)
+    totp.verify(token)
+  end
+
   # Method to send confirmation email
   def send_confirmation_email(email)
     Pony.mail({
@@ -75,7 +92,6 @@ post '/login' do
   if user && BCrypt::Password.new(user.password_digest) == password
     if user.two_factor_enabled
       redirect("/setup-2fa?user_id=#{user.id}")
-
     else
       session[:user_id] = user.id
       redirect("/account/settings")
@@ -108,5 +124,51 @@ post '/account/password/update' do
     redirect "/account/settings?password_updated=true"
   else
     redirect "/account/settings?error=invalid_password"
+  end
+end
+
+# Route for enabling/disabling 2FA
+post '/account/2fa' do
+  require_login
+  enable_2fa = params['enable_2fa'] == 'true'
+  
+  if enable_2fa
+    generate_secret
+    redirect '/setup-2fa?2fa_enabled=true'
+  else
+    redirect "/setup-2fa?2fa_enabled=false"
+  end
+  redirect "/account/settings?2fa_enabled=true"
+end
+
+# Route for displaying setup 2FA page
+get '/setup-2fa' do
+  user = User.first(id: params[:user_id]) if current_user == nil
+  @username = current_user ? current_user.email : user.email
+  @secret = current_user ? current_user.token : user.token
+  qr_code_url = generate_qr_code_url(@secret, @username)
+  qr = RQRCode::QRCode.new(qr_code_url)
+  svg = qr.as_svg(module_size: 3)
+  @encoded_svg = Base64.strict_encode64(svg)
+  erb :setup_2fa
+end
+
+# Route for verifying 2FA token
+post '/verify-2fa' do
+  user = User.first(id: params[:user_id]) if current_user == nil
+  secret = current_user ? current_user.token : user.token
+  token = params[:token]
+  if params[:fa] == 'true'
+    current_user.update(two_factor_enabled: true)
+  elsif params[:fa] == 'false'
+    current_user.update(two_factor_enabled: false)
+  end
+
+  if verify_token(secret, token)
+    session[:user_id] = current_user ? current_user.id : user.id
+    redirect "/account/settings"
+  else
+    session.clear
+    redirect "/login?error=invalid_code"
   end
 end
