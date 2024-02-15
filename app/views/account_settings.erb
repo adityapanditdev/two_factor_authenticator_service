@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Account Settings</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh auto;
+    }
+    .container {
+      background-color: #fff;
+      border-radius: 5px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      width: 400px;
+    }
+    .container h2 {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .container p {
+      margin-bottom: 15px;
+    }
+    .container form {
+      display: flex;
+      flex-direction: column;
+    }
+    .container form label {
+      margin-bottom: 5px;
+    }
+    .container form input[type="password"],
+    .container form input[type="submit"] {
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      width: calc(100% - 22px);
+    }
+    .container form input[type="submit"] {
+      background-color: #4caf50;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .container form input[type="submit"]:hover {
+      background-color: #45a049;
+    }
+    .qr-code {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .qr-code img {
+      max-width: 100%;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Account Settings</h2>
+    <% if params['password_updated'] == 'true' %>
+      <p>Password updated successfully.</p>
+    <% elsif params['error'] == 'invalid_password' %>
+      <p style="color: red;">Invalid current password.</p>
+    <% elsif params['2fa_disabled'] == 'true' %>
+      <p>Two-factor authentication disabled successfully.</p>
+    <% elsif params['session_id'] == 'true' %>
+      <p style="color: red;">Please logout the account.</p>
+    <% end %>
+    <form action="/logout" method="post">
+      <input type="submit" value="Logout">
+    </form>
+    <form action="/account/password/update" method="post">
+      <label for="current_password">Current Password:</label>
+      <input type="password" id="current_password" name="current_password" required>
+      <label for="new_password">New Password:</label>
+      <input type="password" id="new_password" name="new_password" required>
+      <input type="submit" value="Change Password">
+    </form>
+    <h2>Two-Factor Authentication</h2>
+    <form action="/account/2fa" method="post">
+      <% if user.two_factor_enabled %>
+        <p>Two-Factor Authentication is enabled.</p>
+        <input type="hidden" name="enable_2fa" value="false">
+        <input type="submit" value="Disable 2FA">
+      <% else %>
+        <p>Two-Factor Authentication is disabled.</p>
+        <input type="hidden" name="enable_2fa" value="true">
+        <input type="submit" value="Enable 2FA">
+      <% end %>
+    </form>
+  </div>
+</body>
+</html>

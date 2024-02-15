@@ -1,6 +1,9 @@
 require 'sinatra'
 require 'bcrypt'
 require 'pony'
+require 'rotp'
+require 'rqrcode'
+require 'base64'
 require_relative '../models/user'
 
 # Enable sessions and set views directory
@@ -11,6 +14,11 @@ helpers do
   # Method to retrieve the current user based on session
   def current_user
     User.first(id: session[:user_id])
+  end
+
+  # Method to require user login
+  def require_login
+    redirect '/login?error=session_expired' if current_user.nil?
   end
 
   # Method to send confirmation email
@@ -81,4 +89,24 @@ end
 post '/logout' do
   session.clear if current_user
   redirect '/login?error=logout'
+end
+
+# Route for displaying account settings
+get '/account/settings' do
+  require_login
+  erb :account_settings, locals: { user: current_user }
+end
+
+# Route for updating password
+post '/account/password/update' do
+  require_login
+  current_password = params['current_password']
+  new_password = params['new_password']
+
+  if BCrypt::Password.new(current_user.password_digest) == current_password
+    current_user.update(password_digest: BCrypt::Password.create(new_password))
+    redirect "/account/settings?password_updated=true"
+  else
+    redirect "/account/settings?error=invalid_password"
+  end
 end
