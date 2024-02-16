@@ -12,11 +12,18 @@ Sequel.extension :migration
 namespace :db do
   desc 'Run database migrations'
   task :migrate do
-    Sequel::Migrator.run(Sequel.connect(YAML.load_file('config/database.yml')['development']), 'db/migrations')
-    puts "created successfully"
+    db_config = YAML.load_file('config/database.yml')['development']
+    Sequel::Migrator.run(Sequel.connect(db_config), 'db/migrations')
+    puts "Migrations executed successfully on development database."
+  end
+
+  desc 'Run database migrations for test environment'
+  task :migrate_test do
+    db_config = YAML.load_file('config/database.yml')['test']
+    Sequel::Migrator.run(Sequel.connect(db_config), 'db/migrations')
+    puts "Migrations executed successfully on test database."
   end
 end
-
 
 namespace :db do
   desc "Create the database"
@@ -27,7 +34,19 @@ namespace :db do
 
     Sequel.connect(db_config) do |db|
       db.execute("CREATE DATABASE #{database_name}")
-      puts "Database #{database_name} created successfully."
+      puts "Development database #{database_name} created successfully."
+    end
+  end
+
+  desc "Create the test database"
+  task :create_test do
+    db_config = YAML.load_file('config/database.yml')['test']
+    database_name = db_config['database']
+    db_config['database'] = 'postgres'  # Set database to 'postgres' temporarily for creating the new database
+
+    Sequel.connect(db_config) do |db|
+      db.execute("CREATE DATABASE #{database_name}")
+      puts "Test database #{database_name} created successfully."
     end
   end
 end

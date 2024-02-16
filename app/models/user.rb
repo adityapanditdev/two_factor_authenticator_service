@@ -2,7 +2,13 @@ require 'sequel'
 require 'yaml'
 require 'byebug'
 require 'bcrypt'
-Sequel.connect(YAML.load_file('config/database.yml')['development'])
+
+# Set RACK_ENV to 'development' if it's not defined
+ENV['RACK_ENV'] ||= 'development'
+
+# Establish database connection based on environment
+DB_CONFIG = YAML.load_file('config/database.yml')
+DB = Sequel.connect(ENV['RACK_ENV'] == 'test' ? DB_CONFIG['test'] : DB_CONFIG['development'])
 
 class User < Sequel::Model
   plugin :validation_helpers
