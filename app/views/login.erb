@@ -12,6 +12,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
+      background: linear-gradient(135deg, #667eea, #764ba2);
       height: 100vh;
     }
     .login-container {
@@ -68,12 +69,12 @@
     .password-toggle {
       position: absolute;
       right: 610px;
-      top: 60%;
+      top: 55.5%;
       transform: translateY(-50%);
       cursor: pointer;
       color: #666;
     }
-    
+
   </style>
 </head>
 <body>
@@ -105,6 +106,8 @@
       <input id="password" type="password" name="password_digest" required>
       <i class="fas fa-eye password-toggle" onclick="togglePassword()"></i>
       <input type="submit" value="Login">
+      <br>
+      <a href="/">Go to Register page</a>
     </form>
   </div>
 </body>
