@@ -1,5 +1,6 @@
 source 'https://rubygems.org'
 
+# Core gems
 gem 'sinatra'
 gem 'bcrypt'
 gem 'pg'
@@ -8,7 +9,10 @@ gem 'pony'
 gem 'byebug'
 gem 'pry'
 gem 'rotp'
-gem 'rspec', group: :test
 gem 'rqrcode'
-gem 'rack-test'
-gem "faker"
+
+group :test do
+  gem 'rspec'
+  gem 'rack-test'
+  gem 'faker'
+end
